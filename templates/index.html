@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador de Agujeros Negros - Relatividad General</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- KaTeX for LaTeX Math Rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body);"></script>
+
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Controls -->
+        <aside class="sidebar">
+            <div class="brand">
+                <i class="fa-solid fa-circle-nodes logo-icon"></i>
+                <div class="brand-text">
+                    <h1>EventHorizon</h1>
+                    <span>Simulador de Espaciotiempo</span>
+                </div>
+            </div>
+            
+            <div class="control-tabs">
+                <button class="tab-btn active" data-tab="tab-3d" id="btn-tab-3d">
+                    <i class="fa-solid fa-globe"></i> Render 3D Relativista
+                </button>
+                <button class="tab-btn" data-tab="tab-2d" id="btn-tab-2d">
+                    <i class="fa-solid fa-orbit"></i> Órbitas Geodésicas (2D)
+                </button>
+                <button class="tab-btn" data-tab="tab-math" id="btn-tab-math">
+                    <i class="fa-solid fa-calculator"></i> Fundamentos Matemáticos
+                </button>
+            </div>
+
+            <!-- Parameters Panel -->
+            <div class="parameters-panel">
+                <h3><i class="fa-solid fa-sliders"></i> Parámetros de Simulación</h3>
+                
+                <!-- Mass Slider -->
+                <div class="control-group">
+                    <div class="control-label">
+                        <span>Masa del Agujero Negro ($M$)</span>
+                        <span class="value-display" id="val-mass">1.0 M☉</span>
+                    </div>
+                    <input type="range" id="slider-mass" min="0.5" max="3.0" step="0.1" value="1.0" class="slider">
+                    <div class="slider-labels">
+                        <span>Lijero (0.5)</span>
+                        <span>Pesado (3.0)</span>
+                    </div>
+                </div>
+
+                <!-- Simulation specific controls will toggle depending on tab -->
+                <div id="controls-3d" class="sub-controls">
+                    <!-- Disk Size Slider -->
+                    <div class="control-group">
+                        <div class="control-label">
+                            <span>Radio Interno Disco ($R_{in}$)</span>
+                            <span class="value-display" id="val-rin">6.0 M</span>
+                        </div>
+                        <input type="range" id="slider-rin" min="2.0" max="10.0" step="0.5" value="6.0" class="slider">
+                        <span class="helper-text" id="rin-helper">Punto mínimo estable (ISCO = 6M para Schwarzschild)</span>
+                    </div>
+
+                    <div class="control-group">
+                        <div class="control-label">
+                            <span>Radio Externo Disco ($R_{out}$)</span>
+                            <span class="value-display" id="val-rout">15.0 M</span>
+                        </div>
+                        <input type="range" id="slider-rout" min="8.0" max="25.0" step="1.0" value="15.0" class="slider">
+                    </div>
+
+                    <!-- Redshift/Doppler switches -->
+                    <div class="control-group switch-group">
+                        <label class="switch-container">
+                            <input type="checkbox" id="switch-doppler" checked>
+                            <span class="switch-slider"></span>
+                            <span>Efecto Doppler Relativista</span>
+                        </label>
+                        <label class="switch-container">
+                            <input type="checkbox" id="switch-redshift" checked>
+                            <span class="switch-slider"></span>
+                            <span>Redshift Gravitacional</span>
+                        </label>
+                    </div>
+
+                    <!-- Camera angle slider -->
+                    <div class="control-group">
+                        <div class="control-label">
+                            <span>Inclinación de Cámara</span>
+                            <span class="value-display" id="val-inclination">15°</span>
+                        </div>
+                        <input type="range" id="slider-inclination" min="-85" max="85" step="1" value="15" class="slider">
+                    </div>
+                </div>
+
+                <div id="controls-2d" class="sub-controls hidden">
+                    <!-- Particle Starting Position Slider -->
+                    <div class="control-group">
+                        <div class="control-label">
+                            <span>Radio Inicial ($r_0$)</span>
+                            <span class="value-display" id="val-r0">10.0 M</span>
+                        </div>
+                        <input type="range" id="slider-r0" min="4.0" max="25.0" step="0.5" value="10.0" class="slider">
+                    </div>
+
+                    <!-- Initial velocities -->
+                    <div class="control-group">
+                        <div class="control-label">
+                            <span>Velocidad Tangencial Inicial ($v_{\phi}$)</span>
+                            <span class="value-display" id="val-vt0">0.32 c</span>
+                        </div>
+                        <input type="range" id="slider-vt0" min="0.0" max="0.8" step="0.01" value="0.32" class="slider">
+                    </div>
+
+                    <div class="control-group">
+                        <div class="control-label">
+                            <span>Velocidad Radial Inicial ($v_{r}$)</span>
+                            <span class="value-display" id="val-vr0">0.00 c</span>
+                        </div>
+                        <input type="range" id="slider-vr0" min="-0.5" max="0.5" step="0.01" value="0.00" class="slider">
+                    </div>
+
+                    <!-- Orbit solver type -->
+                    <div class="control-group">
+                        <label class="control-label">Tipo de Partícula</label>
+                        <select id="select-particle-type" class="custom-select">
+                            <option value="massive">Materia (Partícula con masa)</option>
+                            <option value="photon">Luz (Fotón, m = 0)</option>
+                        </select>
+                    </div>
+
+                    <div class="control-group">
+                        <label class="control-label">Modelo Físico</label>
+                        <select id="select-model-type" class="custom-select">
+                            <option value="relativity">Relatividad General (Einstein)</option>
+                            <option value="newtonian">Gravedad Clásica (Newton)</option>
+                        </select>
+                    </div>
+
+                    <div class="btn-group">
+                        <button id="btn-launch" class="btn btn-primary"><i class="fa-solid fa-play"></i> Lanzar Partícula</button>
+                        <button id="btn-clear" class="btn btn-secondary"><i class="fa-solid fa-trash-can"></i> Limpiar</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dashboard Stats -->
+            <div class="stats-panel">
+                <h3><i class="fa-solid fa-circle-info"></i> Horizontes y Límites</h3>
+                <div class="stat-card">
+                    <div class="stat-name">Radio de Schwarzschild ($R_s$)</div>
+                    <div class="stat-val" id="stat-rs">2.00 M</div>
+                    <div class="stat-desc">Horizonte de sucesos físico (límite de no retorno)</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-name">Esfera de Fotones ($R_{ph}$)</div>
+                    <div class="stat-val" id="stat-rph">3.00 M</div>
+                    <div class="stat-desc">Órbita circular inestable para la luz</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-name">ISCO ($R_{isco}$)</div>
+                    <div class="stat-val" id="stat-risco">6.00 M</div>
+                    <div class="stat-desc">Órbita circular estable más interna para la materia</div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Display Panel -->
+        <main class="main-content">
+            <!-- 3D Raytracing Tab -->
+            <div id="tab-3d" class="tab-pane active">
+                <div class="canvas-header">
+                    <h2><i class="fa-solid fa-eye"></i> Simulación Óptica 3D: Lente Gravitacional y Disco de Acreción</h2>
+                    <p>Visualización en tiempo real mediante raytracing relativista de una sección transversal del disco de materia cayendo en el agujero negro.</p>
+                </div>
+                
+                <div class="viewport-container">
+                    <canvas id="canvas-3d"></canvas>
+                    <div class="viewport-overlay">
+                        <div class="hud-box top-left">
+                            <span class="hud-label">OBJETO:</span>
+                            <span class="hud-value">Agujero Negro de Schwarzschild</span>
+                        </div>
+                        <div class="hud-box top-right">
+                            <span class="hud-label">EFECTOS VISUALES:</span>
+                            <span class="hud-value">Lente Gravitacional Activa</span>
+                        </div>
+                        <div class="hud-box bottom-left">
+                            <div class="hud-stat"><span class="hud-label">Masa (M):</span> <span class="hud-value" id="hud-m">1.0 M☉</span></div>
+                            <div class="hud-stat"><span class="hud-label">Radio Schwarzschild:</span> <span class="hud-value" id="hud-rs">2.95 km</span></div>
+                        </div>
+                        <!-- Colorbar indicating redshift -->
+                        <div class="hud-box bottom-right panel-legend">
+                            <span class="hud-label">EFECTO DE FRECUENCIA (BEAMING / REDSHIFT)</span>
+                            <div class="colorbar"></div>
+                            <div class="colorbar-labels">
+                                <span>Corrimiento al Azul (Acercándose)</span>
+                                <span>Corrimiento al Rojo (Cerca del Horizonte)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Relativistic Effects Info Section -->
+                <div class="info-grid">
+                    <div class="info-card">
+                        <div class="card-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+                        <h4>Lente Gravitacional</h4>
+                        <p>La inmensa gravedad del agujero negro desvía la luz del disco de acreción que está detrás de él. Esto hace que veamos el disco completo "doblado" arriba y abajo de la sombra central, formando el aro exterior visible en la simulación.</p>
+                    </div>
+                    <div class="info-card">
+                        <div class="card-icon"><i class="fa-solid fa-gauge-high"></i></div>
+                        <h4>Doppler Beaming (Relativista)</h4>
+                        <p>La materia en el disco orbita a velocidades cercanas a la de la luz ($v \approx 0.5c$). El lado que gira hacia el observador (izquierda) parece mucho más brillante y con corrimiento al azul, mientras que el que se aleja (derecha) se atenúa y se desplaza al rojo.</p>
+                    </div>
+                    <div class="info-card">
+                        <div class="card-icon"><i class="fa-solid fa-temperature-arrow-down"></i></div>
+                        <h4>Redshift Gravitacional</h4>
+                        <p>A medida que la luz escapa de la zona cercana al horizonte de sucesos, pierde energía al luchar contra la atracción gravitacional. Las longitudes de onda se estiran hacia el rojo y la radiación disminuye progresivamente hasta desaparecer en el negro absoluto.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2D Orbit Geodesic Tab -->
+            <div id="tab-2d" class="tab-pane hidden">
+                <div class="canvas-header">
+                    <h2><i class="fa-solid fa-compass-drafting"></i> Trayectorias en el Espaciotiempo Curvado</h2>
+                    <p>Integra las ecuaciones geodésicas de la relatividad general de Schwarzschild para observar cómo orbitan la materia y la luz, y compáralas con la física newtoniana.</p>
+                </div>
+
+                <div class="orbit-container">
+                    <div class="canvas-container-2d">
+                        <canvas id="canvas-2d"></canvas>
+                        <div class="orbit-hud">
+                            <div class="hud-item"><span class="label">Modelo:</span> <span id="hud-model-type" class="value">Relativista</span></div>
+                            <div class="hud-item"><span class="label">Coordenadas:</span> <span id="hud-coords" class="value">r = 10.0M, θ = 90°</span></div>
+                            <div class="hud-item"><span class="label">Momento Angular L:</span> <span id="hud-momentum" class="value">3.20</span></div>
+                        </div>
+                    </div>
+
+                    <!-- Orbit Info / Controls -->
+                    <div class="orbit-dashboard">
+                        <div class="panel-section">
+                            <h4>Simulador de Geodésicas</h4>
+                            <p class="description">Lanza partículas de materia o fotones de luz y observa cómo su trayectoria cambia en las inmediaciones del agujero negro. Observa fenómenos como la precesión relativista de las órbitas (rosetas de Einstein), las órbitas de "captura" donde caen al horizonte, o las de rebote.</p>
+                        </div>
+                        
+                        <div class="potential-well-container">
+                            <h4>Potencial Efectivo Relativista $V_{eff}(r)$</h4>
+                            <div class="potential-graph-container">
+                                <canvas id="canvas-potential"></canvas>
+                            </div>
+                            <p class="potential-desc">
+                                En relatividad general, el potencial efectivo tiene un "pozo sin fondo" cerca del agujero negro debido al término de atracción extra $-2ML^2/r^3$. Esto hace que no existan órbitas estables por debajo de $r = 6M$.
+                            </p>
+                        </div>
+
+                        <!-- Mathematical Comparison -->
+                        <div class="comparison-card">
+                            <div class="comp-header">Ecuación Radial de Movimiento</div>
+                            <div class="comp-body">
+                                <div class="comp-col">
+                                    <h5>Newtoniano</h5>
+                                    <div class="equation">
+                                        $$\frac{d^2r}{d\tau^2} = -\frac{M}{r^2} + \frac{L^2}{r^3}$$
+                                    </div>
+                                    <p>Las órbitas son elipses cerradas (leyes de Kepler). Las órbitas estables son posibles a cualquier radio positivo.</p>
+                                </div>
+                                <div class="comp-col highlight">
+                                    <h5>Einstein (Schwarzschild)</h5>
+                                    <div class="equation font-glow">
+                                        $$\frac{d^2r}{d\tau^2} = -\frac{M}{r^2} + \frac{L^2}{r^3} - \frac{3ML^2}{r^4}$$
+                                    </div>
+                                    <p>El término en rojo representa la corrección de la Relatividad General. Causa precesión orbital y atrae fatalmente la partícula al horizonte a distancias cortas.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mathematical Foundations Tab -->
+            <div id="tab-math" class="tab-pane hidden">
+                <div class="math-content-container">
+                    <div class="math-header">
+                        <h2><i class="fa-solid fa-book-open"></i> Fundamentos Físicos y Matemáticos de la Simulación</h2>
+                        <p>Una guía detallada de las ecuaciones de Einstein y las soluciones que gobiernan la materia y la radiación en entornos gravitacionales extremos.</p>
+                    </div>
+
+                    <div class="math-grid">
+                        <!-- Card 1: La Métrica -->
+                        <div class="math-card">
+                            <div class="math-card-header">
+                                <span class="math-badge">Métrica</span>
+                                <h3>El Espaciotiempo de Schwarzschild</h3>
+                            </div>
+                            <p>En 1916, Karl Schwarzschild resolvió las ecuaciones de campo de Einstein en el vacío para un objeto masivo con simetría esférica, estático y sin carga. La métrica (intervalo espaciotemporal $ds^2$) está dada por:</p>
+                            <div class="math-equation-block">
+                                $$ds^2 = -\left(1 - \frac{2GM}{c^2r}\right) c^2 dt^2 + \left(1 - \frac{2GM}{c^2r}\right)^{-1} dr^2 + r^2 d\theta^2 + r^2 \sin^2\theta d\phi^2$$
+                            </div>
+                            <p>Los términos de la métrica nos dicen cómo se curvan el espacio y el tiempo. Donde $G$ es la constante de gravitación universal, $M$ la masa del cuerpo, y $c$ la velocidad de la luz. En unidades geométricas donde $G = c = 1$, el coeficiente temporal y radial se simplifican a $(1 - 2M/r)$.</p>
+                        </div>
+
+                        <!-- Card 2: El Horizonte -->
+                        <div class="math-card">
+                            <div class="math-card-header">
+                                <span class="math-badge">Límites</span>
+                                <h3>El Horizonte de Sucesos ($R_s$)</h3>
+                            </div>
+                            <p>Cuando la masa de una estrella colapsa por debajo de un radio crítico, la velocidad de escape del cuerpo supera la velocidad de la luz. Este radio crítico es el <strong>Radio de Schwarzschild</strong>:</p>
+                            <div class="math-equation-block">
+                                $$R_s = \frac{2GM}{c^2} = 2M \quad (\text{en } G=c=1)$$
+                            </div>
+                            <p>El horizonte de sucesos actúa como una membrana unidireccional. Matemáticamente, el término temporal $g_{00} = -(1 - 2M/r)$ se anula en $r = R_s$, indicando un corrimiento al rojo gravitacional infinito desde el punto de vista de un observador lejano. Para un objeto exterior, el tiempo parece congelarse en esta frontera.</p>
+                        </div>
+
+                        <!-- Card 3: Geodésicas de Luz -->
+                        <div class="math-card">
+                            <div class="math-card-header">
+                                <span class="math-badge">Geodésicas</span>
+                                <h3>Trayectorias de la Luz (Fotones)</h3>
+                            </div>
+                            <p>La luz viaja a través del espaciotiempo siguiendo geodésicas nulas ($ds^2 = 0$). Resolviendo las ecuaciones geodésicas en el plano ecuatorial ($\theta = \pi/2$), obtenemos la ecuación del movimiento de un fotón:</p>
+                            <div class="math-equation-block">
+                                $$\frac{d^2u}{d\phi^2} + u = 3Mu^2 \quad \left(u = \frac{1}{r}\right)$$
+                            </div>
+                            <p>El término de la derecha, $3Mu^2$, es el término relativista de desviación de la luz. En la física newtoniana clásica la luz no orbita, pero aquí existe una órbita circular inestable en:</p>
+                            <div class="math-equation-block">
+                                $$R_{ph} = 3M = 1.5 R_s$$
+                            </div>
+                            <p>Cualquier fotón emitido tangencialmente a este radio girará alrededor del agujero negro indefinidamente (formando la <strong>Esfera de Fotones</strong>) hasta que una pequeña perturbación lo haga escapar hacia el exterior o caer dentro del horizonte.</p>
+                        </div>
+
+                        <!-- Card 4: Disco de Acreción y Corrimientos -->
+                        <div class="math-card">
+                            <div class="math-card-header">
+                                <span class="math-badge">Acreción</span>
+                                <h3>Dinámica del Disco de Acreción</h3>
+                            </div>
+                            <p>La materia cayendo hacia el agujero negro posee momento angular y forma un disco de acreción. Orbita con velocidad angular kepleriana relativista:</p>
+                            <div class="math-equation-block">
+                                $$\Omega = \frac{d\phi}{dt} = \sqrt{\frac{M}{r^3}}$$
+                            </div>
+                            <p>Al orbitar a altas velocidades, la radiación emitida sufre corrimientos térmicos y relativistas debido al Efecto Doppler Relativista combinando el movimiento propio y la distorsión del espacio:</p>
+                            <div class="math-equation-block">
+                                $$1 + z = \frac{\nu_{em}}{\nu_{obs}} = \frac{1 + v \cos \theta}{\sqrt{1 - 3M/r}}$$
+                            </div>
+                            <p>El factor $\sqrt{1 - 3M/r}$ combina el corrimiento al rojo gravitacional y el factor gamma de dilatación temporal para una partícula en órbita kepleriana circular estable. Esto causa la asimetría de brillo en la imagen 3D (el lado que rota hacia nosotros es más azul e intenso, el que se aleja es más rojo y opaco).</p>
+                        </div>
+
+                        <!-- Card 5: Radiación de Hawking -->
+                        <div class="math-card">
+                            <div class="math-card-header">
+                                <span class="math-badge">Termodinámica</span>
+                                <h3>Radiación de Hawking y Termodinámica</h3>
+                            </div>
+                            <p>En 1974, Stephen Hawking demostró que al aplicar teoría cuántica de campos a un fondo espaciotemporal curvo, los agujeros negros no son completamente negros sino que emiten radiación térmica con una temperatura constante proporcional a su gravedad superficial:</p>
+                            <div class="math-equation-block">
+                                $$T_H = \frac{\hbar c^3}{8\pi G M k_B} = \frac{\hbar}{8\pi M k_B}$$
+                            </div>
+                            <p>Esta radiación causa que el agujero negro pierda masa gradualmente por evaporación cuántica. El tiempo de evaporación completo de un agujero negro es proporcional al cubo de su masa:</p>
+                            <div class="math-equation-block">
+                                $$t_{evap} = \frac{5120\pi G^2 M^3}{\hbar c^4} \propto M^3$$
+                            </div>
+                            <p>Para agujeros negros estelares, la temperatura de Hawking es del orden de los nanokelvins, indetectable en la actualidad frente al Fondo Cósmico de Microondas, pero es teóricamente crucial ya que vincula la relatividad general, la termodinámica y la mecánica cuántica.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Script references -->
+    <script src="{{ url_for('static', filename='js/simulation.js') }}"></script>
+</body>
+</html>
